@@ -1,6 +1,3 @@
-ANTLR4 = java -jar /usr/local/lib/antlr-4.6-complete.jar
-SHELL = /bin/bash
-
 
 run: clean
 	javac *.java
