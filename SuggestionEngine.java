@@ -37,7 +37,7 @@ public class SuggestionEngine extends Java8BaseListener {
 		public boolean equals(Object o) {
 			if (o instanceof Candidate) {
 				return ((Candidate)o).methodName.equals(
-					this.methodName);
+						this.methodName);
 			}
 			return super.equals(o);
 		}
@@ -69,9 +69,9 @@ public class SuggestionEngine extends Java8BaseListener {
 	List<String> mMethods;
 
 	public TreeSet<Candidate> suggest(InputStream code,
-					  String word,
-					  int topK)
-	throws IOException {
+									  String word,
+									  int topK)
+			throws IOException {
 		ANTLRInputStream input = new ANTLRInputStream(System.in);
 		Java8Lexer lexer = new Java8Lexer(input);
 		CommonTokenStream tokens = new CommonTokenStream(lexer);
@@ -81,9 +81,9 @@ public class SuggestionEngine extends Java8BaseListener {
 		ParseTree tree = parser.compilationUnit();
 		long elapsedNano = System.nanoTime() - start;
 		long elapsedSec =
-			TimeUnit.SECONDS.convert(elapsedNano, TimeUnit.NANOSECONDS);
+				TimeUnit.SECONDS.convert(elapsedNano, TimeUnit.NANOSECONDS);
 		LOGGER.info(String.format(
-			"Built the parse tree...(took %d seconds)", elapsedSec));
+				"Built the parse tree...(took %d seconds)", elapsedSec));
 		ParseTreeWalker walker = new ParseTreeWalker();
 		mMethods = new ArrayList<>();
 
@@ -98,23 +98,30 @@ public class SuggestionEngine extends Java8BaseListener {
 
 	@Override
 	public void enterMethodDeclaration(
-		Java8Parser.MethodDeclarationContext ctx) {
-		// Access methodModifier and examine all modifiers to see if there is "public".
-		// If the method is public, then get the method name from the methodDeclarator's Identifier.
-		// Add the method name to mMethods variable.
+			Java8Parser.MethodDeclarationContext ctx) {
+		List<Java8Parser.MethodModifierContext> methodModifiers = ctx.methodModifier();
+		for (Java8Parser.MethodModifierContext methodModifierContext : methodModifiers) {
+			if (methodModifierContext.getText().equals("public")) {
+				String methodName = ctx.methodHeader().methodDeclarator().Identifier().getText();
+				if(!mMethods.contains(methodName)){
+					mMethods.add(methodName);
+				}
+				break;
+			}
+		}
 	}
 
 	private TreeSet<Candidate> getTopKNeighbor(String word, int K) {
 		TreeSet<Candidate> minHeap = new TreeSet<>();
-		// - Go through all methods in mMethods and compute the distance of the method name to the word.
-		// - Use
-		//   double distance = Levenshtein.distance(word, methodName);
-		// to compute the distance.
-		// - Use the minHeap to keep track of K methods with the least distance.
-		// - Make sure that there is at least K elements in the heap.
-		// - You can use
-		//	LOGGER.info("my message")
-		// to add your log lines for debugging.
+		for (String methodName : mMethods) {
+			double distance = Levenshtein.distance(word, methodName);
+			Candidate candidate = new Candidate(methodName, distance);
+			minHeap.add(candidate);
+			if (minHeap.size() > K) {
+				minHeap.pollLast();
+			}
+		}
+
 		return minHeap;
 	}
 }
